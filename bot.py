@@ -340,6 +340,33 @@ async def cmd_ahora(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await status.edit_text(f"❌ Error inesperado: {exc}")
 
 
+async def cmd_audio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/audio — force-send the afternoon audio now (admin only)."""
+    if not config.TELEGRAM_ADMIN_ID or str(update.effective_user.id) != config.TELEGRAM_ADMIN_ID:
+        await update.message.reply_text("⛔ No tienes permisos para usar este comando.")
+        return
+    if not config.ELEVENLABS_API_KEY:
+        await update.message.reply_text("⚠️ ElevenLabs no está configurado (falta ELEVENLABS_API_KEY).")
+        return
+    status = await update.message.reply_text("⏳ Generando monólogo y audio… puede tardar unos segundos.")
+    try:
+        script = await generate_afternoon_audio()
+        audio = await generate_voice(script)
+        if audio:
+            await context.bot.send_audio(
+                chat_id=config.TELEGRAM_CHANNEL_ID,
+                audio=io.BytesIO(audio),
+                filename="tarde_motivacional.mp3",
+                title="Tu dosis de tarde 🎧",
+            )
+            await status.edit_text("✅ Audio enviado al canal.")
+        else:
+            await status.edit_text("❌ No se pudo generar el audio. Revisa los logs.")
+    except Exception as exc:
+        logger.error(f"/audio error: {exc}", exc_info=True)
+        await status.edit_text(f"❌ Error inesperado: {exc}")
+
+
 async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     stats = get_stats()
     pending = count_pending()
@@ -516,6 +543,7 @@ def main() -> None:
     application.add_handler(CommandHandler("start",     cmd_start))
     application.add_handler(CommandHandler("siguiente", cmd_siguiente))
     application.add_handler(CommandHandler("ahora",     cmd_ahora))
+    application.add_handler(CommandHandler("audio",     cmd_audio))
     application.add_handler(CommandHandler("stats",     cmd_stats))
     application.add_handler(CommandHandler("reflexion", cmd_reflexion))
     application.add_handler(CommandHandler("frase",     cmd_frase))
