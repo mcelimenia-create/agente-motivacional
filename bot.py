@@ -154,6 +154,9 @@ async def _send_voice_if_enabled(bot, message_mdv2: str) -> None:
                 audio=io.BytesIO(audio),
                 filename="motivacion.mp3",
                 title="Mensaje del día 🎧",
+                read_timeout=120,
+                write_timeout=120,
+                connect_timeout=30,
             )
             logger.info("✅ Audio sent.")
         except TelegramError as exc:
@@ -199,6 +202,9 @@ async def send_afternoon_audio(application: Application) -> None:
                 audio=io.BytesIO(audio),
                 filename="tarde_motivacional.mp3",
                 title="Tu dosis de tarde 🎧",
+                read_timeout=120,
+                write_timeout=120,
+                connect_timeout=30,
             )
             logger.info("✅ Afternoon audio sent.")
         else:
@@ -358,6 +364,9 @@ async def cmd_audio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 audio=io.BytesIO(audio),
                 filename="tarde_motivacional.mp3",
                 title="Tu dosis de tarde 🎧",
+                read_timeout=120,
+                write_timeout=120,
+                connect_timeout=30,
             )
             await status.edit_text("✅ Audio enviado al canal.")
         else:
