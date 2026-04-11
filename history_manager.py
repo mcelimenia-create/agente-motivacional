@@ -60,6 +60,16 @@ def get_recent_messages(n: int = config.CONTEXT_MESSAGES) -> list[str]:
     return [e["message"] for e in history[-n:]]
 
 
+def get_week_messages() -> list[str]:
+    """Return messages sent in the last 7 days (oldest first)."""
+    history = _load()
+    cutoff = datetime.now() - timedelta(days=7)
+    return [
+        e["message"] for e in history
+        if datetime.fromisoformat(e["timestamp"]) > cutoff
+    ]
+
+
 def get_stats() -> dict:
     """Return total messages sent, current streak (days), and last send time."""
     history = _load()

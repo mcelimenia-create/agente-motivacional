@@ -3,3 +3,4 @@ anthropic>=0.25.0
 APScheduler==3.10.4
 python-dotenv>=1.0.1
 pytz>=2024.1
+elevenlabs>=1.0.0

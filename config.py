@@ -18,6 +18,7 @@ ANTHROPIC_MODEL: str = "claude-3-5-haiku-20241022"
 
 # --- Scheduler ---
 SEND_TIME: str = os.getenv("SEND_TIME", "07:30")
+SEND_TIME_EVENING: str = os.getenv("SEND_TIME_EVENING", "21:00")
 TIMEZONE: str = os.getenv("TIMEZONE", "Europe/Madrid")
 
 # --- History ---
@@ -25,24 +26,39 @@ HISTORY_FILE: str = os.getenv("HISTORY_FILE", "messages_history.json")
 MAX_HISTORY_DAYS: int = 90
 CONTEXT_MESSAGES: int = 30
 
+# --- Persistence ---
+PHRASES_FILE: str = os.getenv("PHRASES_FILE", "community_phrases.json")
+STATE_FILE: str = os.getenv("STATE_FILE", "bot_state.json")
+
+# --- ElevenLabs (optional, for voice messages) ---
+ELEVENLABS_API_KEY: str = os.getenv("ELEVENLABS_API_KEY", "")
+ELEVENLABS_VOICE_ID: str = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")  # Rachel
+
 # --- Retry ---
 MAX_RETRIES: int = 3
 RETRY_BASE_DELAY: int = 2  # seconds; actual delay = RETRY_BASE_DELAY ** attempt
 
 
-def get_send_time() -> tuple[int, int]:
-    """Parse SEND_TIME env var into (hour, minute). Exits on invalid format."""
+def _parse_time(value: str, name: str) -> tuple[int, int]:
     try:
-        parts = SEND_TIME.split(":")
+        parts = value.split(":")
         hour, minute = int(parts[0]), int(parts[1])
         if not (0 <= hour <= 23 and 0 <= minute <= 59):
             raise ValueError("Out of range")
         return hour, minute
     except (ValueError, IndexError):
-        logger.error(
-            f"SEND_TIME='{SEND_TIME}' is invalid. Expected HH:MM (e.g. 07:30)."
-        )
+        logger.error(f"{name}='{value}' is invalid. Expected HH:MM (e.g. 07:30).")
         sys.exit(1)
+
+
+def get_send_time() -> tuple[int, int]:
+    """Parse SEND_TIME into (hour, minute)."""
+    return _parse_time(SEND_TIME, "SEND_TIME")
+
+
+def get_evening_send_time() -> tuple[int, int]:
+    """Parse SEND_TIME_EVENING into (hour, minute)."""
+    return _parse_time(SEND_TIME_EVENING, "SEND_TIME_EVENING")
 
 
 def validate() -> None:
