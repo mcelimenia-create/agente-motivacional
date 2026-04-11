@@ -19,7 +19,8 @@ WORKDIR /app
 COPY --from=builder /install /usr/local
 
 # Copy application source
-COPY config.py history_manager.py message_generator.py scheduler.py bot.py ./
+COPY config.py history_manager.py message_generator.py scheduler.py bot.py \
+     phrase_collector.py state_manager.py voice_generator.py ./
 
 # Data directory (mount a volume here for persistence)
 RUN mkdir -p /app/data && chown botuser:botuser /app/data
