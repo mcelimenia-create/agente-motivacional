@@ -235,25 +235,25 @@ async def generate_afternoon_audio() -> str:
     day_name, day_theme = DAY_THEMES[datetime.now().weekday()]
 
     prompt = f"""\
-Escribe UNA frase motivacional en español para escuchar a las 4 de la tarde de un {day_name}.
+Escribe una frase motivacional en español para escuchar a las 4 de la tarde de un {day_name}.
 Tema: {day_theme}.
 
-REQUISITOS ESTRICTOS:
-- Una sola frase o dos frases muy cortas encadenadas
-- Máximo 25 palabras en total
-- Sin emojis, sin puntos suspensivos, sin formato
+REQUISITOS:
+- Una o dos frases que suenen completamente naturales al hablarlas en voz alta
+- Sin emojis, sin puntos suspensivos, sin formato, sin cortes — siempre frase completa
 - Segunda persona (tú/tu)
-- Directa, poderosa, memorable — que golpee emocionalmente
+- Directa, poderosa, memorable
 - Pensada para el bajón de media tarde: energía, acción, no rendirse
+- Que fluya bien cuando la lee una voz en audio
 
 Ejemplos de estilo (NO copies, inspírate):
 - "El esfuerzo que nadie ve es el que define quién eres cuando importa."
 - "No es el talento lo que te lleva lejos, es seguir cuando los demás paran."
 - "Cada hora que terminas bien hoy es una razón para creer en ti mañana."
 
-Devuelve ÚNICAMENTE la frase, sin títulos ni explicaciones."""
+Devuelve ÚNICAMENTE la frase, completa, sin títulos ni explicaciones."""
 
-    raw = await _call_with_retry(prompt, _AUDIO_SYSTEM, max_tokens=80)
+    raw = await _call_with_retry(prompt, _AUDIO_SYSTEM, max_tokens=120)
 
     import random
     fallbacks = [

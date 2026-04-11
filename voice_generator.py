@@ -49,9 +49,9 @@ async def generate_voice(text: str) -> bytes | None:
                 text=text,
                 model_id="eleven_multilingual_v2",
                 voice_settings=VoiceSettings(
-                    stability=0.30,        # más expresivo, menos monótono
-                    similarity_boost=0.75, # fidelidad equilibrada
-                    style=0.65,            # emoción y estilo amplificados
+                    stability=0.50,        # equilibrio: natural sin ser robótico
+                    similarity_boost=0.75, # fidelidad equilibrada a la voz original
+                    style=0.35,            # estilo moderado, dicción natural
                     use_speaker_boost=True, # mejora calidad de audio
                 ),
             )
