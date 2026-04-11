@@ -32,6 +32,4 @@ ENV HISTORY_FILE=/app/data/messages_history.json
 # Unbuffered output so logs appear immediately
 ENV PYTHONUNBUFFERED=1
 
-VOLUME ["/app/data"]
-
 CMD ["python", "bot.py"]
