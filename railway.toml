@@ -1,0 +1,12 @@
+[build]
+builder = "dockerfile"
+
+[deploy]
+numReplicas = 1
+sleepApplication = false
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
+
+# Railway calls GET / on $PORT — our health server responds 200 OK
+healthcheckPath = "/"
+healthcheckTimeout = 300
