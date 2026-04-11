@@ -14,7 +14,7 @@ TELEGRAM_ADMIN_ID: str = os.getenv("TELEGRAM_ADMIN_ID", "")
 
 # --- Anthropic ---
 ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
-ANTHROPIC_MODEL: str = "claude-3-5-haiku-20241022"
+ANTHROPIC_MODEL: str = "claude-haiku-4-5-20251001"
 
 # --- Scheduler ---
 SEND_TIME: str = os.getenv("SEND_TIME", "07:30")
