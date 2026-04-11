@@ -256,8 +256,23 @@ def _start_health_server() -> None:
 
 def main() -> None:
     _setup_logging()
-    config.validate()
-    _start_health_server()  # must bind to $PORT before Railway marks us healthy
+
+    # Bind to $PORT immediately — Railway's health check starts as soon as the
+    # container is up. If we validate config first and it fails (sys.exit),
+    # the port never opens and Railway reports "service unavailable".
+    _start_health_server()
+
+    try:
+        config.validate()
+    except SystemExit:
+        logger.critical(
+            "Bot NOT started due to missing environment variables. "
+            "Set them in Railway → Service → Variables and redeploy."
+        )
+        # Keep the process alive so Railway logs remain visible
+        import time
+        while True:
+            time.sleep(3600)
 
     logger.info("Starting Telegram Motivational Bot…")
 
