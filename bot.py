@@ -2,8 +2,9 @@
 Telegram Motivational Bot — main entry point.
 
 Scheduled jobs:
-  - Daily morning message (themed by day)           → SEND_TIME every day
+  - Daily morning message (texto, sin audio)         → SEND_TIME every day
   - Monday weekly challenge                          → SEND_TIME + 5 min, Mondays
+  - Daily afternoon audio (monólogo ElevenLabs v3)   → SEND_TIME_AUDIO every day
   - Daily evening check-in + poll                   → SEND_TIME_EVENING every day
   - Saturday community phrase spotlight              → 12:00 Saturdays
   - Sunday weekly summary                            → 19:00 Sundays
@@ -12,7 +13,7 @@ Scheduled jobs:
 Commands (via DM or group):
   /start      — welcome
   /siguiente  — preview tomorrow's message
-  /ahora      — force-send now (admin only)
+  /ahora      — force-send text now (admin only)
   /stats      — sending statistics
   /reflexion  — on-demand reflection on any topic
   /frase      — submit a phrase for the community spotlight
@@ -35,6 +36,7 @@ import config
 import state_manager
 from history_manager import add_message, get_stats, get_week_messages
 from message_generator import (
+    generate_afternoon_audio,
     generate_evening_checkin,
     generate_message,
     generate_milestone_message,
@@ -165,21 +167,46 @@ async def _send_voice_if_enabled(bot, message_mdv2: str) -> None:
 # ---------------------------------------------------------------------------
 
 async def send_daily_message(application: Application) -> None:
-    """Morning message — themed by day of week."""
-    logger.info("⏰ Sending morning message…")
+    """Morning message — text only, no audio (audio comes at SEND_TIME_AUDIO)."""
+    logger.info("⏰ Sending morning text message…")
     try:
         day = datetime.now().weekday()
         message = await generate_message(day)
         success = await _send_with_retry(application.bot, config.TELEGRAM_CHANNEL_ID, message)
         if success:
             add_message(message)
-            logger.info("✅ Morning message sent.")
-            await _send_voice_if_enabled(application.bot, message)
+            logger.info("✅ Morning text message sent.")
         else:
             await _notify_admin(application, "No se pudo enviar el mensaje matutino.")
     except Exception as exc:
         logger.error(f"send_daily_message error: {exc}", exc_info=True)
         await _notify_admin(application, f"Error en mensaje matutino: {exc}")
+
+
+async def send_afternoon_audio(application: Application) -> None:
+    """Afternoon audio — different content from morning, sent as voice via ElevenLabs v3."""
+    if not config.ELEVENLABS_API_KEY:
+        logger.info("ElevenLabs not configured — skipping afternoon audio.")
+        return
+    logger.info("🎧 Generating afternoon audio monologue…")
+    try:
+        script = await generate_afternoon_audio()
+        audio = await generate_voice(script)
+        if audio:
+            logger.info(f"Sending afternoon audio ({len(audio):,} bytes)…")
+            await application.bot.send_audio(
+                chat_id=config.TELEGRAM_CHANNEL_ID,
+                audio=io.BytesIO(audio),
+                filename="tarde_motivacional.mp3",
+                title="Tu dosis de tarde 🎧",
+            )
+            logger.info("✅ Afternoon audio sent.")
+        else:
+            logger.error("Afternoon audio generation failed — nothing sent.")
+            await _notify_admin(application, "Error generando el audio de tarde.")
+    except Exception as exc:
+        logger.error(f"send_afternoon_audio error: {exc}", exc_info=True)
+        await _notify_admin(application, f"Error en audio de tarde: {exc}")
 
 
 async def send_weekly_challenge(application: Application) -> None:
@@ -296,15 +323,16 @@ async def cmd_ahora(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not config.TELEGRAM_ADMIN_ID or str(update.effective_user.id) != config.TELEGRAM_ADMIN_ID:
         await update.message.reply_text("⛔ No tienes permisos para usar este comando.")
         return
-    status = await update.message.reply_text("⏳ Generando y enviando mensaje…")
+    status = await update.message.reply_text("⏳ Generando y enviando texto motivacional…")
     try:
         message = await generate_message()
         success = await _send_with_retry(context.bot, config.TELEGRAM_CHANNEL_ID, message)
         if success:
             add_message(message)
-            await status.edit_text("✅ Mensaje enviado al canal. Generando audio…")
-            await _send_voice_if_enabled(context.bot, message)
-            await status.edit_text("✅ Mensaje (y audio si ElevenLabs está activo) enviados.")
+            await status.edit_text(
+                f"✅ Texto enviado al canal.\n"
+                f"El audio se envía automáticamente a las {config.SEND_TIME_AUDIO}."
+            )
         else:
             await status.edit_text("❌ No se pudo enviar el mensaje.")
     except Exception as exc:
@@ -370,6 +398,7 @@ async def cmd_frase(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def post_init(application: Application) -> None:
     morning_h, morning_m = config.get_send_time()
+    audio_h,   audio_m   = config.get_audio_send_time()
     evening_h, evening_m = config.get_evening_send_time()
 
     # Monday challenge fires 5 minutes after the morning message
@@ -381,6 +410,9 @@ async def post_init(application: Application) -> None:
 
     async def _morning():
         await send_daily_message(application)
+
+    async def _audio():
+        await send_afternoon_audio(application)
 
     async def _challenge():
         await send_weekly_challenge(application)
@@ -399,6 +431,8 @@ async def post_init(application: Application) -> None:
 
     scheduler.add_job(_morning,   CronTrigger(hour=morning_h, minute=morning_m, timezone=config.TIMEZONE),
                       id="morning",    replace_existing=True, coalesce=True, misfire_grace_time=60)
+    scheduler.add_job(_audio,     CronTrigger(hour=audio_h,   minute=audio_m,   timezone=config.TIMEZONE),
+                      id="audio",      replace_existing=True, coalesce=True, misfire_grace_time=60)
     scheduler.add_job(_challenge, CronTrigger(day_of_week="mon", hour=ch_h, minute=ch_m, timezone=config.TIMEZONE),
                       id="challenge",  replace_existing=True, coalesce=True, misfire_grace_time=60)
     scheduler.add_job(_evening,   CronTrigger(hour=evening_h, minute=evening_m, timezone=config.TIMEZONE),
@@ -413,7 +447,9 @@ async def post_init(application: Application) -> None:
     scheduler.start()
     application.bot_data["scheduler"] = scheduler
     logger.info(
-        f"Scheduler started — morning={morning_h:02d}:{morning_m:02d}, "
+        f"Scheduler started — "
+        f"morning text={morning_h:02d}:{morning_m:02d}, "
+        f"afternoon audio={audio_h:02d}:{audio_m:02d}, "
         f"evening={evening_h:02d}:{evening_m:02d} ({config.TIMEZONE})"
     )
 

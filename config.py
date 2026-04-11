@@ -17,8 +17,9 @@ ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL: str = "claude-haiku-4-5-20251001"
 
 # --- Scheduler ---
-SEND_TIME: str = os.getenv("SEND_TIME", "07:30")
-SEND_TIME_EVENING: str = os.getenv("SEND_TIME_EVENING", "21:00")
+SEND_TIME: str = os.getenv("SEND_TIME", "07:30")         # texto motivacional mañana
+SEND_TIME_AUDIO: str = os.getenv("SEND_TIME_AUDIO", "16:00")  # audio tarde
+SEND_TIME_EVENING: str = os.getenv("SEND_TIME_EVENING", "21:00")  # check-in noche
 TIMEZONE: str = os.getenv("TIMEZONE", "Europe/Madrid")
 
 # --- History ---
@@ -54,6 +55,11 @@ def _parse_time(value: str, name: str) -> tuple[int, int]:
 def get_send_time() -> tuple[int, int]:
     """Parse SEND_TIME into (hour, minute)."""
     return _parse_time(SEND_TIME, "SEND_TIME")
+
+
+def get_audio_send_time() -> tuple[int, int]:
+    """Parse SEND_TIME_AUDIO into (hour, minute)."""
+    return _parse_time(SEND_TIME_AUDIO, "SEND_TIME_AUDIO")
 
 
 def get_evening_send_time() -> tuple[int, int]:

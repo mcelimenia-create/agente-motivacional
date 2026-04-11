@@ -217,6 +217,59 @@ Devuelve ÚNICAMENTE el JSON."""
     )
 
 # ---------------------------------------------------------------------------
+# 3. Afternoon audio monologue (sent at 16:00, designed to be HEARD not read)
+# ---------------------------------------------------------------------------
+
+_AUDIO_SYSTEM = (
+    "Eres un locutor motivacional con voz cálida y energética. "
+    "Escribes monólogos pensados para ser escuchados como un podcast corto. "
+    "Tu estilo es cercano, directo y emotivo — como un buen amigo que inspira. "
+    "Usas pausas naturales, segunda persona (tú/tu) y ritmo conversacional."
+)
+
+async def generate_afternoon_audio() -> str:
+    """
+    Generate a spoken-word motivational monologue for the 4pm audio.
+    Returns plain text (no MarkdownV2) — optimized for text-to-speech.
+    Deliberately different content from the morning text message.
+    """
+    day_name, _ = DAY_THEMES[datetime.now().weekday()]
+
+    prompt = f"""\
+Escribe un monólogo motivacional en español para ser escuchado a las 4 de la tarde de un {day_name}.
+El oyente lleva ya más de la mitad del día — puede estar cansado, distraído o con el bajón de media tarde.
+
+REQUISITOS ESTRICTOS:
+- Texto fluido para VOZ: sin emojis, sin viñetas, sin asteriscos, sin formato
+- Segunda persona (tú/tu)
+- Incluye UNA analogía o microhistoria de 2-3 frases
+- Energía moderada-alta, emotivo, auténtico
+- Longitud: 150-180 palabras (aprox. 45-60 segundos de audio)
+- Termina con una frase de afirmación poderosa en positivo
+- DISTINTO al típico mensaje de buenos días: habla del momento actual, la tarde, el esfuerzo ya hecho
+
+Devuelve ÚNICAMENTE el texto del monólogo, sin títulos ni encabezados."""
+
+    raw = await _call_with_retry(prompt, _AUDIO_SYSTEM, max_tokens=350)
+    if raw:
+        logger.info("Afternoon audio script generated.")
+        return raw
+
+    # Fallback plain text
+    return (
+        "Ya llevas más de la mitad del día. Eso, aunque no lo parezca, es mucho. "
+        "Piensa en un escalador: no celebra la cima antes de llegar, pero tampoco ignora "
+        "cada metro que ya escaló. Tú estás ahí ahora mismo — a mitad de la pared, "
+        "con el esfuerzo acumulado y la cima todavía posible.\n\n"
+        "La tarde es donde se decide quién eres de verdad. No cuando todo va bien, "
+        "sino cuando el cansancio llega y tú decides seguir de todos modos. "
+        "Eso es lo que te diferencia.\n\n"
+        "Tienes más de lo que crees. Termina fuerte este día. "
+        "Porque cuando llegue la noche, quieres poder decir que diste todo."
+    )
+
+
+# ---------------------------------------------------------------------------
 # 3. Weekly challenge (sent Monday morning)
 # ---------------------------------------------------------------------------
 
