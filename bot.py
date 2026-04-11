@@ -12,6 +12,7 @@ Startup sequence:
 import asyncio
 import logging
 import logging.handlers
+import os
 from pathlib import Path
 
 from telegram import Update
@@ -42,12 +43,15 @@ def _setup_logging() -> None:
     console.setFormatter(fmt)
     root.addHandler(console)
 
-    # Rotating file (5 MB × 3 backups)
-    log_file = logging.handlers.RotatingFileHandler(
-        "bot.log", maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
-    )
-    log_file.setFormatter(fmt)
-    root.addHandler(log_file)
+    # Rotating file — only if LOG_FILE env var is set.
+    # On Railway, stdout is captured directly so no file is needed.
+    log_path = os.environ.get("LOG_FILE", "")
+    if log_path:
+        file_handler = logging.handlers.RotatingFileHandler(
+            log_path, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
+        )
+        file_handler.setFormatter(fmt)
+        root.addHandler(file_handler)
 
 
 logger = logging.getLogger(__name__)
