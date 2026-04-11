@@ -221,52 +221,53 @@ Devuelve ÚNICAMENTE el JSON."""
 # ---------------------------------------------------------------------------
 
 _AUDIO_SYSTEM = (
-    "Eres un locutor motivacional con voz cálida y energética. "
-    "Escribes monólogos pensados para ser escuchados como un podcast corto. "
-    "Tu estilo es cercano, directo y emotivo — como un buen amigo que inspira. "
-    "Usas pausas naturales, segunda persona (tú/tu) y ritmo conversacional."
+    "Eres un locutor motivacional con voz cálida y directa. "
+    "Escribes frases cortas y poderosas pensadas para ser escuchadas. "
+    "Sin relleno, sin introducción — solo la frase, impactante y memorable."
 )
 
 async def generate_afternoon_audio() -> str:
     """
-    Generate a spoken-word motivational monologue for the 4pm audio.
+    Generate a short motivational phrase for the 4pm audio (~10 seconds).
     Returns plain text (no MarkdownV2) — optimized for text-to-speech.
-    Deliberately different content from the morning text message.
+    Target: 20-25 words maximum (≈ 10 seconds spoken at natural pace).
     """
-    day_name, _ = DAY_THEMES[datetime.now().weekday()]
+    day_name, day_theme = DAY_THEMES[datetime.now().weekday()]
 
     prompt = f"""\
-Escribe un monólogo motivacional en español para ser escuchado a las 4 de la tarde de un {day_name}.
-El oyente lleva ya más de la mitad del día — puede estar cansado, distraído o con el bajón de media tarde.
+Escribe UNA frase motivacional en español para escuchar a las 4 de la tarde de un {day_name}.
+Tema: {day_theme}.
 
 REQUISITOS ESTRICTOS:
-- Texto fluido para VOZ: sin emojis, sin viñetas, sin asteriscos, sin formato
+- Una sola frase o dos frases muy cortas encadenadas
+- Máximo 25 palabras en total
+- Sin emojis, sin puntos suspensivos, sin formato
 - Segunda persona (tú/tu)
-- Incluye UNA analogía o microhistoria de 2-3 frases
-- Energía moderada-alta, emotivo, auténtico
-- Longitud: 150-180 palabras (aprox. 45-60 segundos de audio)
-- Termina con una frase de afirmación poderosa en positivo
-- DISTINTO al típico mensaje de buenos días: habla del momento actual, la tarde, el esfuerzo ya hecho
+- Directa, poderosa, memorable — que golpee emocionalmente
+- Pensada para el bajón de media tarde: energía, acción, no rendirse
 
-Devuelve ÚNICAMENTE el texto del monólogo, sin títulos ni encabezados."""
+Ejemplos de estilo (NO copies, inspírate):
+- "El esfuerzo que nadie ve es el que define quién eres cuando importa."
+- "No es el talento lo que te lleva lejos, es seguir cuando los demás paran."
+- "Cada hora que terminas bien hoy es una razón para creer en ti mañana."
 
-    raw = await _call_with_retry(prompt, _AUDIO_SYSTEM, max_tokens=350)
+Devuelve ÚNICAMENTE la frase, sin títulos ni explicaciones."""
+
+    raw = await _call_with_retry(prompt, _AUDIO_SYSTEM, max_tokens=80)
     if raw:
-        logger.info("Afternoon audio script generated.")
+        logger.info("Afternoon audio phrase generated.")
         return raw
 
-    # Fallback plain text
-    return (
-        "Ya llevas más de la mitad del día. Eso, aunque no lo parezca, es mucho. "
-        "Piensa en un escalador: no celebra la cima antes de llegar, pero tampoco ignora "
-        "cada metro que ya escaló. Tú estás ahí ahora mismo — a mitad de la pared, "
-        "con el esfuerzo acumulado y la cima todavía posible.\n\n"
-        "La tarde es donde se decide quién eres de verdad. No cuando todo va bien, "
-        "sino cuando el cansancio llega y tú decides seguir de todos modos. "
-        "Eso es lo que te diferencia.\n\n"
-        "Tienes más de lo que crees. Termina fuerte este día. "
-        "Porque cuando llegue la noche, quieres poder decir que diste todo."
-    )
+    # Fallback short phrases
+    import random
+    fallbacks = [
+        "El que sigue cuando está cansado es el que llega cuando los demás se rinden.",
+        "No necesitas motivación perfecta. Necesitas dar el siguiente paso ahora.",
+        "La tarde es tuya. Decide terminarla siendo alguien de quien estés orgulloso.",
+        "Los grandes resultados no vienen de los días fáciles, vienen de los días como hoy.",
+        "Sigue. No porque sea fácil, sino porque tú puedes más de lo que crees.",
+    ]
+    return random.choice(fallbacks)
 
 
 # ---------------------------------------------------------------------------
