@@ -1,7 +1,7 @@
 """
-Voice generation via ElevenLabs v3 with emotional enhancement.
+Voice generation via ElevenLabs with emotional enhancement.
 
-Model: eleven_multilingual_v3
+Model: eleven_multilingual_v2 (the most advanced multilingual model available)
 Voice settings tuned for expressiveness and emotion:
   - stability=0.30   → voz más variable y expresiva (menos robótica)
   - similarity_boost=0.75 → fidelidad equilibrada a la voz original
@@ -47,7 +47,7 @@ async def generate_voice(text: str) -> bytes | None:
             chunks = client.text_to_speech.convert(
                 voice_id=config.ELEVENLABS_VOICE_ID,
                 text=text,
-                model_id="eleven_multilingual_v3",
+                model_id="eleven_multilingual_v2",
                 voice_settings=VoiceSettings(
                     stability=0.30,        # más expresivo, menos monótono
                     similarity_boost=0.75, # fidelidad equilibrada
