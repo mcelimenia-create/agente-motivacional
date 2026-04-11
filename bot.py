@@ -150,14 +150,22 @@ async def send_daily_message(application: Application) -> None:
             logger.info("✅ Morning message sent.")
             # Optional voice
             if config.ELEVENLABS_API_KEY:
+                logger.info("ElevenLabs key found — requesting audio…")
                 audio = await generate_voice(mdv2_to_plain(message))
                 if audio:
-                    await application.bot.send_audio(
-                        chat_id=config.TELEGRAM_CHANNEL_ID,
-                        audio=io.BytesIO(audio),
-                        filename="motivacion.mp3",
-                        title="Mensaje del día 🎧",
-                    )
+                    logger.info(f"Sending audio to channel ({len(audio):,} bytes)…")
+                    try:
+                        await application.bot.send_audio(
+                            chat_id=config.TELEGRAM_CHANNEL_ID,
+                            audio=io.BytesIO(audio),
+                            filename="motivacion.mp3",
+                            title="Mensaje del día 🎧",
+                        )
+                        logger.info("✅ Audio sent.")
+                    except TelegramError as exc:
+                        logger.error(f"Failed to send audio: {exc}")
+                else:
+                    logger.warning("Audio generation returned None — no audio sent.")
         else:
             await _notify_admin(application, "No se pudo enviar el mensaje matutino.")
     except Exception as exc:

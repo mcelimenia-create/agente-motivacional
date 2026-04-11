@@ -1,10 +1,6 @@
 """
 Optional voice message generation via ElevenLabs.
-
-Only active when ELEVENLABS_API_KEY is set in the environment.
-If the key is absent, all functions return None silently.
-
-The output is MP3 bytes, sent via Telegram's send_audio (shows as audio player).
+Active only when ELEVENLABS_API_KEY is set.
 """
 import asyncio
 import logging
@@ -15,46 +11,35 @@ logger = logging.getLogger(__name__)
 
 
 async def generate_voice(text: str) -> bytes | None:
-    """
-    Convert text to MP3 audio using ElevenLabs.
-
-    Parameters
-    ----------
-    text : str
-        Plain text (no MarkdownV2 markers). Use mdv2_to_plain() before calling.
-
-    Returns
-    -------
-    bytes | None
-        MP3 bytes, or None if ElevenLabs is not configured or the call fails.
-    """
     if not config.ELEVENLABS_API_KEY:
+        logger.warning("ELEVENLABS_API_KEY not set — skipping voice generation.")
         return None
+
+    logger.info(f"Generating voice audio ({len(text)} chars)…")
 
     try:
         from elevenlabs.client import ElevenLabs
+    except ImportError:
+        logger.error("elevenlabs package not installed. Add it to requirements.txt.")
+        return None
 
+    try:
         client = ElevenLabs(api_key=config.ELEVENLABS_API_KEY)
 
         def _sync_generate() -> bytes:
-            audio_chunks = client.text_to_speech.convert(
+            # output_format omitted — uses ElevenLabs default (mp3_44100_128)
+            # which works on all plans including free
+            chunks = client.text_to_speech.convert(
                 voice_id=config.ELEVENLABS_VOICE_ID,
                 text=text,
                 model_id="eleven_multilingual_v2",
-                output_format="mp3_44100_128",
             )
-            return b"".join(audio_chunks)
+            data = b"".join(chunks)
+            logger.info(f"Voice generated — {len(data):,} bytes.")
+            return data
 
-        audio_bytes = await asyncio.to_thread(_sync_generate)
-        logger.info(f"Voice generated — {len(audio_bytes)} bytes.")
-        return audio_bytes
+        return await asyncio.to_thread(_sync_generate)
 
-    except ImportError:
-        logger.warning(
-            "elevenlabs package not installed. "
-            "Run: pip install elevenlabs  (or add to requirements.txt)"
-        )
-        return None
     except Exception as exc:
-        logger.error(f"ElevenLabs error: {exc}", exc_info=True)
+        logger.error(f"ElevenLabs failed: {type(exc).__name__}: {exc}", exc_info=True)
         return None
