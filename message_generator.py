@@ -254,11 +254,7 @@ Ejemplos de estilo (NO copies, inspírate):
 Devuelve ÚNICAMENTE la frase, sin títulos ni explicaciones."""
 
     raw = await _call_with_retry(prompt, _AUDIO_SYSTEM, max_tokens=80)
-    if raw:
-        logger.info("Afternoon audio phrase generated.")
-        return raw
 
-    # Fallback short phrases
     import random
     fallbacks = [
         "El que sigue cuando está cansado es el que llega cuando los demás se rinden.",
@@ -267,7 +263,17 @@ Devuelve ÚNICAMENTE la frase, sin títulos ni explicaciones."""
         "Los grandes resultados no vienen de los días fáciles, vienen de los días como hoy.",
         "Sigue. No porque sea fácil, sino porque tú puedes más de lo que crees.",
     ]
-    return random.choice(fallbacks)
+    phrase = raw if raw else random.choice(fallbacks)
+
+    intro = random.choice([
+        "¡Hola comunidad!",
+        "¡Buenas tardes, comunidad!",
+        "¡Hola a todos!",
+        "¡Qué tal, comunidad!",
+    ])
+
+    logger.info("Afternoon audio phrase generated.")
+    return f"{intro} Aquí va la frase del día. {phrase}"
 
 
 # ---------------------------------------------------------------------------
