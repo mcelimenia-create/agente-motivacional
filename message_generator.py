@@ -32,6 +32,66 @@ DAY_THEMES = {
 }
 
 # ---------------------------------------------------------------------------
+# Weekly series themes (rotating by ISO week number % 12)
+# ---------------------------------------------------------------------------
+WEEKLY_SERIES = [
+    ("Arranque Fuerte",       "cómo empezar con energía y determinación"),
+    ("Foco Total",            "eliminar distracciones y concentrarte en lo que importa"),
+    ("Disciplina Diaria",     "constancia y hábitos que superan a la motivación"),
+    ("Mentalidad de Campeón", "reprogramar creencias limitantes y pensar en grande"),
+    ("Gestión de Energía",    "hábitos que te recargan frente a los que te drenan"),
+    ("El Poder del Entorno",  "las personas y espacios que te impulsan o frenan"),
+    ("De Sueño a Plan",       "convertir objetivos vagos en pasos concretos"),
+    ("Resiliencia",           "caerse, levantarse y salir más fuerte"),
+    ("Gratitud Activa",       "ver y aprovechar lo que ya tienes en tu vida"),
+    ("Acción Masiva",         "ejecutar sin excusas, hacer más y pensar menos"),
+    ("Descanso Inteligente",  "recuperar bien para rendir mejor"),
+    ("Tu Propósito",          "el por qué detrás de todo lo que haces"),
+]
+
+def get_week_theme() -> tuple[str, str]:
+    """Return (name, description) for the current week's series theme."""
+    week_num = datetime.now().isocalendar()[1]
+    return WEEKLY_SERIES[week_num % len(WEEKLY_SERIES)]
+
+
+# ---------------------------------------------------------------------------
+# Wednesday mid-week polls (aligned with weekly series themes)
+# ---------------------------------------------------------------------------
+WEDNESDAY_POLLS = [
+    ("¿Con qué energía arrancaste esta semana?",
+     ["🚀 Con todo desde el primer día", "😐 Normal, tirando", "🐌 Poco a poco voy cogiendo ritmo", "🔄 Remontando"]),
+    ("¿Cuánto tiempo has pasado en foco real esta semana?",
+     ["💪 Más de 4 horas al día", "😐 Entre 2 y 3 horas", "😓 Menos de 1 hora", "🤯 El caos me ganó"]),
+    ("¿Has mantenido tus hábitos esta semana?",
+     ["✅ Todos sin excepción", "🤏 La gran mayoría", "⚡ Algunos sí, otros no", "❌ Ha sido difícil"]),
+    ("¿Cómo está tu mentalidad a mitad de semana?",
+     ["🔥 Imparable, sin frenos", "😐 Estable y constante", "😓 Necesito un empujón", "🧘 Reconectando"]),
+    ("¿Cómo está tu nivel de energía hoy?",
+     ["⚡ Al 100%, sin parar", "😐 Normal, bien", "😴 Bajo, necesito recarga", "🔄 Recuperándome"]),
+    ("¿Tu entorno te está impulsando esta semana?",
+     ["🚀 Totalmente", "😐 Más o menos", "😓 Me está frenando", "🔄 Lo estoy cambiando"]),
+    ("¿Cuánto avanzaste en tus objetivos esta semana?",
+     ["🎯 Mucho, voy bien", "😐 Algo de progreso", "🐌 Poco, pero sigo", "🔄 Replanificando"]),
+    ("¿Superaste algún obstáculo esta semana?",
+     ["💪 Sí, y salí más fuerte", "🤏 Sí, lo estoy trabajando", "😅 Sin grandes obstáculos", "🔄 Sigo intentándolo"]),
+    ("¿Qué tan consciente eres de lo bueno en tu vida hoy?",
+     ["🙏 Muy consciente", "😐 Algo, podría mejorar", "😓 Me cuesta verlo ahora", "🔄 Practicando la gratitud"]),
+    ("¿Cuántas cosas importantes completaste esta semana?",
+     ["🎯 Más de 3 cosas clave", "😐 Una o dos importantes", "🐌 Casi nada todavía", "🔄 Priorizando ahora"]),
+    ("¿Cómo estás descansando esta semana?",
+     ["😴 Genial, me cuido bien", "😐 Regular", "😓 Poco y mal", "🔄 Ajustando mi rutina"]),
+    ("¿Sientes que tus acciones esta semana tienen sentido?",
+     ["🌟 Totalmente alineado", "😐 Más o menos", "😕 Lo estoy buscando", "🔄 Reconectando con mi propósito"]),
+]
+
+def get_wednesday_poll() -> tuple[str, list[str]]:
+    """Return (question, options) for this week's Wednesday mid-week poll."""
+    week_num = datetime.now().isocalendar()[1]
+    return WEDNESDAY_POLLS[week_num % len(WEDNESDAY_POLLS)]
+
+
+# ---------------------------------------------------------------------------
 # MarkdownV2 helpers
 # ---------------------------------------------------------------------------
 
@@ -140,9 +200,12 @@ async def generate_message(day_of_week: int | None = None) -> str:
         if recent else "(Sin mensajes previos)"
     )
 
+    theme_name, _ = get_week_theme()
+
     prompt = f"""\
 Genera un mensaje motivacional de buenos días en español para un {day_name}.
 Tema del día: {day_theme}.
+Tema de esta semana: "{theme_name}" — conéctalo sutilmente si encaja con el mensaje.
 
 Devuelve EXACTAMENTE este JSON:
 {{
@@ -294,21 +357,24 @@ _CHALLENGE_SYSTEM = (
 )
 
 async def generate_weekly_challenge() -> str:
-    """Generate the Monday weekly challenge."""
-    prompt = """\
-Crea un reto semanal práctico y alcanzable para esta semana.
-El reto debe poder hacerse en 5-15 minutos al día y generar un cambio real si se mantiene 7 días.
+    """Generate the Monday weekly challenge aligned with the week's series theme."""
+    theme_name, theme_desc = get_week_theme()
+    theme_esc = escape_mdv2(theme_name)
+
+    prompt = f"""\
+Crea el reto semanal para la semana de "{theme_name}": {theme_desc}.
+El reto debe estar directamente relacionado con este tema, poder hacerse en 5-15 minutos al día
+y generar un cambio real si se mantiene 7 días.
 
 Devuelve EXACTAMENTE este JSON:
-{
+{{
   "title": "nombre corto del reto (máx 6 palabras)",
   "emoji": "UN emoji que represente el reto",
   "challenge": "descripción del reto en 1-2 frases claras: QUÉ hacer, CUÁNDO y CUÁNTO tiempo",
-  "why": "por qué este reto tiene impacto (1 frase)",
+  "why": "por qué este reto impacta directamente en el tema de la semana (1 frase)",
   "cta": "frase de cierre motivadora y directa (1 frase corta)"
-}
+}}
 
-Varía el tipo de reto: hábitos físicos, mentales, sociales, creativos, de gratitud, productividad.
 Devuelve ÚNICAMENTE el JSON."""
 
     raw = await _call_with_retry(prompt, _CHALLENGE_SYSTEM, max_tokens=400)
@@ -321,6 +387,7 @@ Devuelve ÚNICAMENTE el JSON."""
             cta_esc = escape_mdv2(d["cta"])
             emoji = d["emoji"]
             return (
+                f"📅 *Semana de {theme_esc}*\n\n"
                 f"🎯 *Reto de la semana* {emoji}\n\n"
                 f"*{title_esc}*\n\n"
                 f"{challenge_esc}\n\n"
@@ -331,6 +398,7 @@ Devuelve ÚNICAMENTE el JSON."""
             logger.error(f"Bad JSON for weekly challenge: {exc}")
 
     return (
+        f"📅 *Semana de {theme_esc}*\n\n"
         f"🎯 *Reto de la semana* 💪\n\n"
         f"*Escribe 3 gratitudes cada noche*\n\n"
         f"Antes de dormir, anota 3 cosas buenas que pasaron hoy\\. Solo 3 minutos\\.\n\n"
@@ -484,4 +552,50 @@ async def generate_phrase_intro(phrase: str, username: str | None) -> str:
         f"_{phrase_esc}_\n\n"
         f"Gracias a {author_esc} por compartirla\\. "
         f"¿Quieres que tu frase aparezca aquí? Envíame /frase seguido de tu reflexión\\."
+    )
+
+# ---------------------------------------------------------------------------
+# 8. Onboarding — exclusive welcome message for new members
+# ---------------------------------------------------------------------------
+
+_ONBOARDING_SYSTEM = (
+    "Eres un coach motivacional cercano y cálido. "
+    "Escribes mensajes de bienvenida que hacen que la gente se sienta especial e importante. "
+    "Respondes ÚNICAMENTE con el JSON solicitado."
+)
+
+async def generate_onboarding_message() -> str:
+    """Generate an exclusive welcome message for new members who DM the bot."""
+    theme_name, _ = get_week_theme()
+    prompt = f"""\
+Escribe un mensaje de bienvenida exclusivo para alguien que acaba de unirse a un canal motivacional de Telegram.
+Este mensaje lo reciben solo los nuevos miembros, directamente del bot — es especial.
+Esta semana el canal trabaja el tema: "{theme_name}".
+
+Devuelve EXACTAMENTE este JSON:
+{{
+  "greeting": "saludo de bienvenida cálido y personal (ej: Bienvenido/a, Nos alegra que estés aquí...)",
+  "emoji": "UN emoji acogedor",
+  "quote": "reflexión breve y poderosa sobre los nuevos comienzos o el potencial de las personas (1-2 líneas)",
+  "body": "2-3 frases: qué recibirán en el canal (mensajes diarios, audio, retos semanales), menciona que esta semana el tema es '{theme_name}', y termina con una frase de ánimo directa"
+}}
+
+Devuelve ÚNICAMENTE el JSON."""
+
+    raw = await _call_with_retry(prompt, _ONBOARDING_SYSTEM, max_tokens=450)
+    if raw:
+        try:
+            data = json.loads(raw)
+            return build_message(data["greeting"], data["emoji"], data["quote"], data["body"])
+        except (json.JSONDecodeError, KeyError) as exc:
+            logger.error(f"Bad JSON for onboarding: {exc}")
+
+    theme_esc = escape_mdv2(theme_name)
+    return build_message(
+        "¡Bienvenido/a!", "🌟",
+        "Cada gran camino empieza con el primer paso. Acabas de darlo.",
+        f"Cada mañana recibirás un mensaje para empezar el día con energía\\. "
+        f"Por las tardes, una frase motivacional en audio\\. "
+        f"Y cada semana, un reto que te hará crecer — esta semana trabajamos *{theme_esc}*\\. "
+        f"Estamos aquí para recordarte que puedes más de lo que crees\\."
     )
