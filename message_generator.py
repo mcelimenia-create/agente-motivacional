@@ -273,7 +273,15 @@ Devuelve ÚNICAMENTE la frase, completa, sin títulos ni explicaciones."""
     ])
 
     logger.info("Afternoon audio phrase generated.")
-    return f"{intro} Aquí va la frase del día. {phrase}"
+    # SSML <break> tags create explicit pauses between the three parts:
+    # greeting → transition → phrase
+    return (
+        f"{intro}"
+        f'<break time="0.8s"/>'
+        f"Aquí va la frase del día."
+        f'<break time="1.2s"/>'
+        f"{phrase}"
+    )
 
 
 # ---------------------------------------------------------------------------
