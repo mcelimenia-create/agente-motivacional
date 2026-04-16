@@ -149,7 +149,7 @@ async def send_daily_message(application: Application) -> None:
         message = await generate_message(day)
         success = await _send_with_retry(application.bot, config.TELEGRAM_CHANNEL_ID, message)
         if success:
-            add_message(message)
+            add_message(message, "morning")
             logger.info("✅ Morning text message sent.")
         else:
             await _notify_admin(application, "No se pudo enviar el mensaje matutino.")
@@ -163,7 +163,9 @@ async def send_weekly_challenge(application: Application) -> None:
     logger.info("🎯 Sending weekly challenge…")
     try:
         message = await generate_weekly_challenge()
-        await _send_with_retry(application.bot, config.TELEGRAM_CHANNEL_ID, message)
+        success = await _send_with_retry(application.bot, config.TELEGRAM_CHANNEL_ID, message)
+        if success:
+            add_message(message, "challenge")
         logger.info("✅ Weekly challenge sent.")
     except Exception as exc:
         logger.error(f"send_weekly_challenge error: {exc}", exc_info=True)
@@ -174,7 +176,9 @@ async def send_evening_checkin(application: Application) -> None:
     logger.info("🌙 Sending evening check-in…")
     try:
         message = await generate_evening_checkin()
-        await _send_with_retry(application.bot, config.TELEGRAM_CHANNEL_ID, message)
+        success = await _send_with_retry(application.bot, config.TELEGRAM_CHANNEL_ID, message)
+        if success:
+            add_message(message, "evening")
 
         # Send daily poll
         day = datetime.now().weekday()
@@ -213,7 +217,9 @@ async def send_weekly_summary(application: Application) -> None:
     try:
         week_msgs = get_week_messages()
         message = await generate_weekly_summary(week_msgs)
-        await _send_with_retry(application.bot, config.TELEGRAM_CHANNEL_ID, message)
+        success = await _send_with_retry(application.bot, config.TELEGRAM_CHANNEL_ID, message)
+        if success:
+            add_message(message, "summary")
         logger.info("✅ Weekly summary sent.")
     except Exception as exc:
         logger.error(f"send_weekly_summary error: {exc}", exc_info=True)
@@ -342,7 +348,7 @@ async def cmd_ahora(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         message = await generate_message()
         success = await _send_with_retry(context.bot, config.TELEGRAM_CHANNEL_ID, message)
         if success:
-            add_message(message)
+            add_message(message, "morning")
             await status.edit_text("✅ Texto enviado al canal.")
         else:
             await status.edit_text("❌ No se pudo enviar el mensaje.")

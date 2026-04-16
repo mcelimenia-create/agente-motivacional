@@ -40,10 +40,14 @@ def _save(history: list[dict]) -> None:
         logger.error(f"Could not save history to {config.HISTORY_FILE}: {exc}")
 
 
-def add_message(message: str) -> None:
+def add_message(message: str, msg_type: str = "morning") -> None:
     """Append a sent message and prune entries older than MAX_HISTORY_DAYS."""
     history = _load()
-    history.append({"message": message, "timestamp": datetime.now().isoformat()})
+    history.append({
+        "message": message,
+        "timestamp": datetime.now().isoformat(),
+        "type": msg_type,
+    })
 
     cutoff = datetime.now() - timedelta(days=config.MAX_HISTORY_DAYS)
     history = [
@@ -54,9 +58,21 @@ def add_message(message: str) -> None:
     logger.debug(f"History saved — {len(history)} entries total.")
 
 
-def get_recent_messages(n: int = config.CONTEXT_MESSAGES) -> list[str]:
-    """Return the last *n* message texts (oldest first) for LLM context."""
+def get_recent_messages(n: int = config.CONTEXT_MESSAGES, msg_type: str | None = None) -> list[str]:
+    """Return the last *n* message texts (oldest first) for LLM context.
+
+    Parameters
+    ----------
+    n : int
+        Maximum number of messages to return.
+    msg_type : str | None
+        If set, filter to only messages of this type
+        ('morning', 'evening', 'challenge', 'summary').
+        Entries without a 'type' field count as 'morning' (backwards compat).
+    """
     history = _load()
+    if msg_type:
+        history = [e for e in history if e.get("type", "morning") == msg_type]
     return [e["message"] for e in history[-n:]]
 
 

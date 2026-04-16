@@ -8,6 +8,7 @@ lets us apply formatting programmatically, avoiding MarkdownV2 escaping bugs.
 import asyncio
 import json
 import logging
+import random
 import re
 from datetime import datetime
 
@@ -46,7 +47,20 @@ WEEKLY_SERIES = [
     ("Gratitud Activa",       "ver y aprovechar lo que ya tienes en tu vida"),
     ("Acción Masiva",         "ejecutar sin excusas, hacer más y pensar menos"),
     ("Descanso Inteligente",  "recuperar bien para rendir mejor"),
-    ("Tu Propósito",          "el por qué detrás de todo lo que haces"),
+    ("Tu Propósito",              "el por qué detrás de todo lo que haces"),
+    # — second rotation (weeks 13–24) —
+    ("Comunicación Poderosa",     "expresarte con claridad e impacto en cada situación"),
+    ("Gestión del Tiempo",        "hacer más en menos tiempo sin agotarte"),
+    ("Confianza en Ti Mismo",     "construir autoestima desde adentro hacia afuera"),
+    ("Manejo del Estrés",         "convertir la presión en rendimiento y calma interior"),
+    ("Creatividad Práctica",      "innovar y resolver problemas de forma original"),
+    ("Liderazgo Personal",        "dirigirte a ti mismo antes de poder dirigir a otros"),
+    ("Mentalidad de Crecimiento", "aprender de los errores y mejorar siempre sin excusas"),
+    ("Conexiones Auténticas",     "construir relaciones que te enriquezcan de verdad"),
+    ("Inteligencia Emocional",    "entender y gestionar tus emociones con madurez"),
+    ("Alto Rendimiento",          "las rutinas que separan resultados mediocres de los extraordinarios"),
+    ("Visión a Largo Plazo",      "pensar en años, no en días, y actuar en consecuencia"),
+    ("Equilibrio y Bienestar",    "rendir sin sacrificar tu salud ni tu felicidad"),
 ]
 
 def get_week_theme() -> tuple[str, str]:
@@ -83,6 +97,31 @@ WEDNESDAY_POLLS = [
      ["😴 Genial, me cuido bien", "😐 Regular", "😓 Poco y mal", "🔄 Ajustando mi rutina"]),
     ("¿Sientes que tus acciones esta semana tienen sentido?",
      ["🌟 Totalmente alineado", "😐 Más o menos", "😕 Lo estoy buscando", "🔄 Reconectando con mi propósito"]),
+    # — second rotation (weeks 13–24) —
+    ("¿Cómo estás comunicándote esta semana?",
+     ["💬 Con mucha claridad", "😐 Normal", "😓 Me cuesta expresarme", "🔄 Mejorando poco a poco"]),
+    ("¿Estás usando bien tu tiempo esta semana?",
+     ["⏱️ Muy bien, con foco", "😐 Más o menos", "😓 Lo pierdo fácil", "🔄 Reorganizando prioridades"]),
+    ("¿Cómo está tu confianza esta semana?",
+     ["💪 Alta, me siento capaz", "😐 Normal", "😓 Dudando de mí", "🔄 Construyéndola día a día"]),
+    ("¿Cómo manejas el estrés esta semana?",
+     ["🧘 Muy bien, con calma", "😐 Tirando", "😓 Me supera a ratos", "🔄 Buscando mi ritmo"]),
+    ("¿Estás siendo creativo/a en la resolución de problemas?",
+     ["💡 Sí, encontré soluciones nuevas", "😐 Lo de siempre", "😓 Estancado/a", "🔄 Abriendo la mente"]),
+    ("¿Te estás liderando bien a ti mismo/a esta semana?",
+     ["🎯 Sí, con disciplina", "😐 Regular", "😓 Me falta dirección", "🔄 Trabajando en ello"]),
+    ("¿Estás aprendiendo de los errores esta semana?",
+     ["📚 Sí, cada error me enseña", "😐 Intento", "😓 Me afectan demasiado", "🔄 Cambiando mi perspectiva"]),
+    ("¿Cómo están tus relaciones esta semana?",
+     ["❤️ Conectado/a y presente", "😐 Normal", "😓 Distante o aislado/a", "🔄 Cuidando más mis vínculos"]),
+    ("¿Estás gestionando bien tus emociones esta semana?",
+     ["🧠 Muy bien, con madurez", "😐 Más o menos", "😓 Me desborda a veces", "🔄 Practicando la gestión"]),
+    ("¿Estás rindiendo al nivel que quieres esta semana?",
+     ["🚀 Sí, al máximo", "😐 A buen ritmo", "😓 Por debajo de lo esperado", "🔄 Ajustando mis hábitos"]),
+    ("¿Piensas en el largo plazo o solo en el día a día?",
+     ["🔭 Tengo visión clara", "😐 Mezclo ambas", "😓 Solo veo el corto plazo", "🔄 Construyendo mi visión"]),
+    ("¿Cómo está tu equilibrio entre trabajo y bienestar?",
+     ["⚖️ Muy equilibrado", "😐 Tirando", "😓 Desequilibrado", "🔄 Poniendo límites"]),
 ]
 
 def get_wednesday_poll() -> tuple[str, list[str]]:
@@ -116,9 +155,9 @@ def mdv2_to_plain(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Fallback messages (pre-built, used when all API retries fail)
+# Fallback messages — typed pools, randomly selected (never repeat in order)
 # ---------------------------------------------------------------------------
-_FALLBACKS = [
+_MORNING_FALLBACKS = [
     build_message("¡Buenos días!", "☀️",
                   "El éxito es la suma de pequeños esfuerzos repetidos día tras día.",
                   "No hace falta un gran salto. Un paso firme cada mañana es suficiente para llegar lejos."),
@@ -128,14 +167,63 @@ _FALLBACKS = [
     build_message("Buenos días", "🔥",
                   "No esperes la motivación perfecta — actúa, y la motivación te seguirá.",
                   "El cuerpo sigue a la mente, y la mente sigue a la acción. Da el primer paso aunque sea pequeño."),
+    build_message("¡Despierta con propósito!", "💪",
+                  "El que actúa decide su destino. El que espera lo hereda.",
+                  "Antes de abrir cualquier pantalla, decide cuál es tu prioridad número uno de hoy. Eso es lo que importa."),
+    build_message("Empieza bien el día", "🌅",
+                  "No son las circunstancias las que definen tu día — es tu respuesta a ellas.",
+                  "Tienes más control del que crees. Elige cómo vas a responder hoy, antes de que empiece el caos."),
+    build_message("Un nuevo día comienza", "🌄",
+                  "La constancia hace lo que el talento no puede hacer solo.",
+                  "No necesitas ser el mejor, solo necesitas ser consistente. Hoy es otro día de construir."),
+    build_message("Buenos días", "⚡",
+                  "El foco no es hacer más cosas — es hacer las cosas correctas.",
+                  "Identifica las dos cosas más importantes de hoy y hazlas primero. El resto puede esperar."),
+    build_message("¡A por el día!", "🚀",
+                  "El único fracaso real es no intentarlo.",
+                  "Haz algo hoy que tu yo de ayer pensaba que era demasiado difícil. Solo una cosa."),
+    build_message("Comienza con energía", "✨",
+                  "La diferencia entre quien eres y quien quieres ser está en lo que haces cada día.",
+                  "No esperes el momento perfecto. El momento perfecto siempre es ahora."),
+    build_message("¡Buenos días!", "🎯",
+                  "Las personas de éxito no tienen más tiempo — tienen mejores prioridades.",
+                  "Pregúntate: ¿qué acción de hoy tendrá más impacto en un mes? Empieza por ahí."),
 ]
-_fallback_idx = 0
 
-def _next_fallback() -> str:
-    global _fallback_idx
-    msg = _FALLBACKS[_fallback_idx % len(_FALLBACKS)]
-    _fallback_idx += 1
-    return msg
+_EVENING_FALLBACKS = [
+    build_message("Buenas noches", "🌙",
+                  "El descanso no es rendirse — es prepararse para mañana.",
+                  "Antes de dormir, piensa en una cosa que salió bien hoy. ¿Qué fue?"),
+    build_message("Cierra bien el día", "✨",
+                  "Cada día que terminas con gratitud, el siguiente empieza mejor.",
+                  "¿Qué pequeña victoria tuviste hoy que merece reconocimiento?"),
+    build_message("Hora de descansar", "🌟",
+                  "La noche no es el final — es el punto de recarga para un nuevo comienzo.",
+                  "¿Qué aprendiste hoy que te hará mejor mañana?"),
+    build_message("Buenas noches", "🕯️",
+                  "Un día vivido con intención vale más que una semana de inercia.",
+                  "Cierra el día sabiendo que diste algo de ti. ¿Qué fue ese algo?"),
+    build_message("Que descanses bien", "💫",
+                  "El sueño no interrumpe el progreso — lo consolida.",
+                  "Antes de cerrar el día, ¿de qué momento de hoy estás más agradecido/a?"),
+]
+
+_CHALLENGE_FALLBACKS = [
+    ("Escribe 3 gratitudes cada noche",
+     "Antes de dormir, anota 3 cosas buenas que pasaron hoy. Solo 3 minutos.",
+     "Entrena tu mente para ver lo positivo en cualquier situación."),
+    ("Camina 20 minutos sin el móvil",
+     "Cada día, sal a caminar 20 minutos sin auriculares ni pantallas. Solo tú y tu mente.",
+     "El movimiento y la soledad activan ideas que el ruido apaga."),
+    ("Una tarea difícil antes del mediodía",
+     "Identifica la tarea más difícil del día y hazla antes de las 12. Sin negociación.",
+     "Quien domina la mañana, domina el día."),
+]
+
+
+def _random_fallback(pool: list) -> str:
+    """Return a random element from a fallback pool."""
+    return random.choice(pool)
 
 # ---------------------------------------------------------------------------
 # Anthropic client (lazy singleton)
@@ -194,9 +282,10 @@ async def generate_message(day_of_week: int | None = None) -> str:
         day_of_week = datetime.now().weekday()
 
     day_name, day_theme = DAY_THEMES[day_of_week]
-    recent = get_recent_messages()
+    recent = get_recent_messages(n=10, msg_type="morning")
     history_ctx = (
-        "MENSAJES RECIENTES (no repitas temas):\n" + "\n---\n".join(recent[-10:])
+        "MENSAJES MATUTINOS RECIENTES — no repitas temas, frases ni estructuras:\n"
+        + "\n---\n".join(mdv2_to_plain(m) for m in recent)
         if recent else "(Sin mensajes previos)"
     )
 
@@ -236,7 +325,7 @@ Devuelve ÚNICAMENTE el JSON."""
             logger.error(f"Bad JSON from Claude: {exc}")
 
     logger.error("Using fallback morning message.")
-    return _next_fallback()
+    return _random_fallback(_MORNING_FALLBACKS)
 
 # ---------------------------------------------------------------------------
 # 2. Evening check-in
@@ -251,16 +340,25 @@ _EVENING_SYSTEM = (
 async def generate_evening_checkin() -> str:
     """Generate the evening reflection message."""
     day_name, _ = DAY_THEMES[datetime.now().weekday()]
+    recent = get_recent_messages(n=5, msg_type="evening")
+    history_ctx = (
+        "MENSAJES NOCTURNOS RECIENTES — no repitas preguntas ni temas de reflexión:\n"
+        + "\n---\n".join(mdv2_to_plain(m) for m in recent)
+        if recent else "(Sin mensajes nocturnos previos)"
+    )
+
     prompt = f"""\
 Genera un mensaje de cierre del día para un {day_name} por la noche.
 Debe invitar a reflexionar sobre el día, agradecer algo pequeño, y preparar la mente para descansar.
+
+{history_ctx}
 
 Devuelve EXACTAMENTE este JSON:
 {{
   "greeting": "saludo nocturno breve (ej: Buenas noches, Hora de cerrar el día...)",
   "emoji": "UN emoji nocturno o reflexivo (🌙✨🌟💫🕯️🌜)",
   "quote": "reflexión breve y serena de 1 línea",
-  "body": "2 frases cálidas. Termina con UNA pregunta de reflexión sobre el día."
+  "body": "2 frases cálidas. Termina con UNA pregunta de reflexión sobre el día — distinta a las recientes."
 }}
 
 Devuelve ÚNICAMENTE el JSON."""
@@ -273,79 +371,7 @@ Devuelve ÚNICAMENTE el JSON."""
         except (json.JSONDecodeError, KeyError) as exc:
             logger.error(f"Bad JSON for evening: {exc}")
 
-    return build_message(
-        "Buenas noches", "🌙",
-        "El descanso no es rendirse — es prepararse para mañana.",
-        "Antes de dormir, piensa en una cosa que salió bien hoy. ¿Qué fue?"
-    )
-
-# ---------------------------------------------------------------------------
-# 3. Afternoon audio monologue (sent at 16:00, designed to be HEARD not read)
-# ---------------------------------------------------------------------------
-
-_AUDIO_SYSTEM = (
-    "Eres un locutor motivacional con voz cálida y directa. "
-    "Escribes frases cortas y poderosas pensadas para ser escuchadas. "
-    "Sin relleno, sin introducción — solo la frase, impactante y memorable."
-)
-
-async def generate_afternoon_audio() -> str:
-    """
-    Generate a short motivational phrase for the 4pm audio (~10 seconds).
-    Returns plain text (no MarkdownV2) — optimized for text-to-speech.
-    Target: 20-25 words maximum (≈ 10 seconds spoken at natural pace).
-    """
-    day_name, day_theme = DAY_THEMES[datetime.now().weekday()]
-
-    prompt = f"""\
-Escribe una frase motivacional en español para escuchar a las 4 de la tarde de un {day_name}.
-Tema: {day_theme}.
-
-REQUISITOS:
-- Una o dos frases que suenen completamente naturales al hablarlas en voz alta
-- Sin emojis, sin puntos suspensivos, sin formato, sin cortes — siempre frase completa
-- Segunda persona (tú/tu)
-- Directa, poderosa, memorable
-- Pensada para el bajón de media tarde: energía, acción, no rendirse
-- Que fluya bien cuando la lee una voz en audio
-
-Ejemplos de estilo (NO copies, inspírate):
-- "El esfuerzo que nadie ve es el que define quién eres cuando importa."
-- "No es el talento lo que te lleva lejos, es seguir cuando los demás paran."
-- "Cada hora que terminas bien hoy es una razón para creer en ti mañana."
-
-Devuelve ÚNICAMENTE la frase, completa, sin títulos ni explicaciones."""
-
-    raw = await _call_with_retry(prompt, _AUDIO_SYSTEM, max_tokens=120)
-
-    import random
-    fallbacks = [
-        "El que sigue cuando está cansado es el que llega cuando los demás se rinden.",
-        "No necesitas motivación perfecta. Necesitas dar el siguiente paso ahora.",
-        "La tarde es tuya. Decide terminarla siendo alguien de quien estés orgulloso.",
-        "Los grandes resultados no vienen de los días fáciles, vienen de los días como hoy.",
-        "Sigue. No porque sea fácil, sino porque tú puedes más de lo que crees.",
-    ]
-    phrase = raw if raw else random.choice(fallbacks)
-
-    intro = random.choice([
-        "¡Hola comunidad!",
-        "¡Buenas tardes, comunidad!",
-        "¡Hola a todos!",
-        "¡Qué tal, comunidad!",
-    ])
-
-    logger.info("Afternoon audio phrase generated.")
-    # SSML <break> tags create explicit pauses between the three parts:
-    # greeting → transition → phrase
-    return (
-        f"{intro}"
-        f'<break time="0.8s"/>'
-        f"Aquí va la frase del día."
-        f'<break time="1.2s"/>'
-        f"{phrase}"
-    )
-
+    return _random_fallback(_EVENING_FALLBACKS)
 
 # ---------------------------------------------------------------------------
 # 3. Weekly challenge (sent Monday morning)
@@ -360,11 +386,19 @@ async def generate_weekly_challenge() -> str:
     """Generate the Monday weekly challenge aligned with the week's series theme."""
     theme_name, theme_desc = get_week_theme()
     theme_esc = escape_mdv2(theme_name)
+    recent = get_recent_messages(n=4, msg_type="challenge")
+    history_ctx = (
+        "RETOS ANTERIORES — no repitas conceptos ni actividades similares:\n"
+        + "\n---\n".join(mdv2_to_plain(m) for m in recent)
+        if recent else "(Sin retos previos)"
+    )
 
     prompt = f"""\
 Crea el reto semanal para la semana de "{theme_name}": {theme_desc}.
 El reto debe estar directamente relacionado con este tema, poder hacerse en 5-15 minutos al día
 y generar un cambio real si se mantiene 7 días.
+
+{history_ctx}
 
 Devuelve EXACTAMENTE este JSON:
 {{
@@ -397,12 +431,13 @@ Devuelve ÚNICAMENTE el JSON."""
         except (json.JSONDecodeError, KeyError) as exc:
             logger.error(f"Bad JSON for weekly challenge: {exc}")
 
+    title, challenge, why = _random_fallback(_CHALLENGE_FALLBACKS)
     return (
         f"📅 *Semana de {theme_esc}*\n\n"
         f"🎯 *Reto de la semana* 💪\n\n"
-        f"*Escribe 3 gratitudes cada noche*\n\n"
-        f"Antes de dormir, anota 3 cosas buenas que pasaron hoy\\. Solo 3 minutos\\.\n\n"
-        f"_Entrena tu mente para ver lo positivo en cualquier situación\\._\n\n"
+        f"*{escape_mdv2(title)}*\n\n"
+        f"{escape_mdv2(challenge)}\n\n"
+        f"_{escape_mdv2(why)}_\n\n"
         f"¿Aceptas el reto esta semana?"
     )
 
@@ -595,7 +630,7 @@ Devuelve ÚNICAMENTE el JSON."""
         "¡Bienvenido/a!", "🌟",
         "Cada gran camino empieza con el primer paso. Acabas de darlo.",
         f"Cada mañana recibirás un mensaje para empezar el día con energía\\. "
-        f"Por las tardes, una frase motivacional en audio\\. "
-        f"Y cada semana, un reto que te hará crecer — esta semana trabajamos *{theme_esc}*\\. "
+        f"Cada semana un reto práctico alineado con el tema de la semana\\. "
+        f"Esta semana trabajamos *{theme_esc}*\\. "
         f"Estamos aquí para recordarte que puedes más de lo que crees\\."
     )

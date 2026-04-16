@@ -19,16 +19,18 @@ WORKDIR /app
 COPY --from=builder /install /usr/local
 
 # Copy application source
-COPY config.py history_manager.py message_generator.py scheduler.py bot.py \
-     phrase_collector.py state_manager.py voice_generator.py ./
+COPY config.py history_manager.py message_generator.py bot.py \
+     phrase_collector.py state_manager.py ./
 
 # Data directory (mount a volume here for persistence)
 RUN mkdir -p /app/data && chown botuser:botuser /app/data
 
 USER botuser
 
-# Store history outside the image so it survives container restarts
+# Persist all data files in /app/data so they survive container restarts
 ENV HISTORY_FILE=/app/data/messages_history.json
+ENV PHRASES_FILE=/app/data/community_phrases.json
+ENV STATE_FILE=/app/data/bot_state.json
 
 # Unbuffered output so logs appear immediately
 ENV PYTHONUNBUFFERED=1
