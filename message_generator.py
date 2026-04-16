@@ -148,10 +148,41 @@ def build_message(greeting: str, emoji: str, quote: str, body: str) -> str:
 
 
 def mdv2_to_plain(text: str) -> str:
-    """Strip MarkdownV2 formatting — used for voice generation prompts."""
+    """Strip MarkdownV2 formatting to get plain comparable text."""
     text = re.sub(r"\\(.)", r"\1", text)   # unescape \. \! etc.
     text = re.sub(r"[*_~`]", "", text)     # remove bold/italic markers
     return text.strip()
+
+
+_STOPWORDS = {
+    "de", "la", "el", "en", "un", "una", "que", "es", "y", "a", "con", "por",
+    "para", "tu", "te", "se", "lo", "no", "si", "del", "al", "le", "su", "sus",
+    "pero", "más", "este", "esta", "hay", "ser", "cada", "hoy", "día", "días",
+    "vida", "vez", "como", "qué", "cómo", "solo", "bien", "muy", "ya", "todo",
+    "todos", "las", "los", "sus", "has", "hace", "algo", "nada", "puedes",
+}
+
+
+def _is_duplicate(candidate: str, recent_plain: list[str], threshold: float = 0.45) -> bool:
+    """Return True if candidate shares too many content words with any recent message."""
+    cand_words = set(mdv2_to_plain(candidate).lower().split()) - _STOPWORDS
+    if len(cand_words) < 8:
+        return False
+    for ref in recent_plain:
+        ref_words = set(ref.lower().split()) - _STOPWORDS
+        if not ref_words:
+            continue
+        overlap = len(cand_words & ref_words) / min(len(cand_words), len(ref_words))
+        if overlap >= threshold:
+            logger.debug(f"Duplicate detected (overlap={overlap:.2f}): {candidate[:60]}…")
+            return True
+    return False
+
+
+def _pick_fallback(pool: list, recent_plain: list[str]) -> str:
+    """Pick a random fallback that is not too similar to recent messages."""
+    candidates = [m for m in pool if not _is_duplicate(m, recent_plain)]
+    return random.choice(candidates) if candidates else random.choice(pool)
 
 
 # ---------------------------------------------------------------------------
@@ -282,35 +313,34 @@ async def generate_message(day_of_week: int | None = None) -> str:
         day_of_week = datetime.now().weekday()
 
     day_name, day_theme = DAY_THEMES[day_of_week]
-    recent = get_recent_messages(n=10, msg_type="morning")
-    history_ctx = (
-        "MENSAJES MATUTINOS RECIENTES — no repitas temas, frases ni estructuras:\n"
-        + "\n---\n".join(mdv2_to_plain(m) for m in recent)
-        if recent else "(Sin mensajes previos)"
+    recent = get_recent_messages(n=20, msg_type="morning")
+    recent_plain = [mdv2_to_plain(m) for m in recent]
+    history_block = (
+        "\n---\n".join(recent_plain)
+        if recent_plain else "(Sin mensajes previos)"
     )
 
     theme_name, _ = get_week_theme()
 
     prompt = f"""\
-Genera un mensaje motivacional de buenos días en español para un {day_name}.
-Tema del día: {day_theme}.
-Tema de esta semana: "{theme_name}" — conéctalo sutilmente si encaja con el mensaje.
+⛔ MENSAJES MATUTINOS YA ENVIADOS — NO reutilices sus citas, ideas ni estructuras:
+{history_block}
+
+---
+TAREA: Crea un mensaje de buenos días COMPLETAMENTE DIFERENTE a los anteriores.
+- Día: {day_name} — temas del día: {day_theme}
+- Tema semanal: "{theme_name}" — incorpóralo sutilmente si encaja
+- Varía el tono: reflexivo / energético / filosófico / práctico / con humor positivo
+- La "quote" debe ser una reflexión NUEVA, no usada antes
+- Sin clichés vacíos
 
 Devuelve EXACTAMENTE este JSON:
 {{
   "greeting": "saludo breve acorde al día",
   "emoji": "UN emoji relevante",
-  "quote": "cita o reflexión inspiradora de 1-2 líneas",
+  "quote": "reflexión inspiradora NUEVA de 1-2 líneas, no repetida",
   "body": "2-3 frases prácticas. Puede terminar con una pregunta reflexiva."
 }}
-
-REGLAS:
-- Varía el tono: reflexivo / energético / filosófico / práctico / con humor positivo
-- Sin clichés vacíos
-- Idioma: español
-- NO repitas los temas recientes
-
-{history_ctx}
 
 Devuelve ÚNICAMENTE el JSON."""
 
@@ -319,13 +349,16 @@ Devuelve ÚNICAMENTE el JSON."""
         try:
             data = json.loads(raw)
             msg = build_message(data["greeting"], data["emoji"], data["quote"], data["body"])
-            logger.info(f"Morning message generated ({day_name}).")
-            return msg
+            if _is_duplicate(msg, recent_plain):
+                logger.warning("Morning message too similar to recent history — using fallback.")
+            else:
+                logger.info(f"Morning message generated ({day_name}).")
+                return msg
         except (json.JSONDecodeError, KeyError) as exc:
             logger.error(f"Bad JSON from Claude: {exc}")
 
     logger.error("Using fallback morning message.")
-    return _random_fallback(_MORNING_FALLBACKS)
+    return _pick_fallback(_MORNING_FALLBACKS, recent_plain)
 
 # ---------------------------------------------------------------------------
 # 2. Evening check-in
@@ -340,25 +373,27 @@ _EVENING_SYSTEM = (
 async def generate_evening_checkin() -> str:
     """Generate the evening reflection message."""
     day_name, _ = DAY_THEMES[datetime.now().weekday()]
-    recent = get_recent_messages(n=5, msg_type="evening")
-    history_ctx = (
-        "MENSAJES NOCTURNOS RECIENTES — no repitas preguntas ni temas de reflexión:\n"
-        + "\n---\n".join(mdv2_to_plain(m) for m in recent)
-        if recent else "(Sin mensajes nocturnos previos)"
+    recent = get_recent_messages(n=10, msg_type="evening")
+    recent_plain = [mdv2_to_plain(m) for m in recent]
+    history_block = (
+        "\n---\n".join(recent_plain)
+        if recent_plain else "(Sin mensajes nocturnos previos)"
     )
 
     prompt = f"""\
-Genera un mensaje de cierre del día para un {day_name} por la noche.
-Debe invitar a reflexionar sobre el día, agradecer algo pequeño, y preparar la mente para descansar.
+⛔ MENSAJES NOCTURNOS YA ENVIADOS — NO repitas sus preguntas, reflexiones ni frases:
+{history_block}
 
-{history_ctx}
+---
+TAREA: Crea un mensaje de cierre del día DIFERENTE a los anteriores para un {day_name} por la noche.
+Invita a reflexionar, agradecer algo pequeño y preparar la mente para descansar.
 
 Devuelve EXACTAMENTE este JSON:
 {{
   "greeting": "saludo nocturno breve (ej: Buenas noches, Hora de cerrar el día...)",
   "emoji": "UN emoji nocturno o reflexivo (🌙✨🌟💫🕯️🌜)",
-  "quote": "reflexión breve y serena de 1 línea",
-  "body": "2 frases cálidas. Termina con UNA pregunta de reflexión sobre el día — distinta a las recientes."
+  "quote": "reflexión serena de 1 línea, NUEVA y diferente a las anteriores",
+  "body": "2 frases cálidas. Termina con UNA pregunta de reflexión DISTINTA a todas las anteriores."
 }}
 
 Devuelve ÚNICAMENTE el JSON."""
@@ -367,11 +402,15 @@ Devuelve ÚNICAMENTE el JSON."""
     if raw:
         try:
             data = json.loads(raw)
-            return build_message(data["greeting"], data["emoji"], data["quote"], data["body"])
+            msg = build_message(data["greeting"], data["emoji"], data["quote"], data["body"])
+            if _is_duplicate(msg, recent_plain):
+                logger.warning("Evening message too similar to recent history — using fallback.")
+            else:
+                return msg
         except (json.JSONDecodeError, KeyError) as exc:
             logger.error(f"Bad JSON for evening: {exc}")
 
-    return _random_fallback(_EVENING_FALLBACKS)
+    return _pick_fallback(_EVENING_FALLBACKS, recent_plain)
 
 # ---------------------------------------------------------------------------
 # 3. Weekly challenge (sent Monday morning)
@@ -386,19 +425,22 @@ async def generate_weekly_challenge() -> str:
     """Generate the Monday weekly challenge aligned with the week's series theme."""
     theme_name, theme_desc = get_week_theme()
     theme_esc = escape_mdv2(theme_name)
-    recent = get_recent_messages(n=4, msg_type="challenge")
-    history_ctx = (
-        "RETOS ANTERIORES — no repitas conceptos ni actividades similares:\n"
-        + "\n---\n".join(mdv2_to_plain(m) for m in recent)
-        if recent else "(Sin retos previos)"
+    recent = get_recent_messages(n=8, msg_type="challenge")
+    recent_plain = [mdv2_to_plain(m) for m in recent]
+    history_block = (
+        "\n---\n".join(recent_plain)
+        if recent_plain else "(Sin retos previos)"
     )
 
     prompt = f"""\
-Crea el reto semanal para la semana de "{theme_name}": {theme_desc}.
-El reto debe estar directamente relacionado con este tema, poder hacerse en 5-15 minutos al día
-y generar un cambio real si se mantiene 7 días.
+⛔ RETOS YA ENVIADOS — NO repitas actividades, conceptos ni ideas similares:
+{history_block}
 
-{history_ctx}
+---
+TAREA: Crea un reto semanal NUEVO para la semana de "{theme_name}": {theme_desc}.
+- Debe poder hacerse en 5-15 minutos al día
+- Debe generar un cambio real si se mantiene 7 días
+- Diferente a todos los retos anteriores en concepto y actividad
 
 Devuelve EXACTAMENTE este JSON:
 {{
@@ -431,7 +473,7 @@ Devuelve ÚNICAMENTE el JSON."""
         except (json.JSONDecodeError, KeyError) as exc:
             logger.error(f"Bad JSON for weekly challenge: {exc}")
 
-    title, challenge, why = _random_fallback(_CHALLENGE_FALLBACKS)
+    title, challenge, why = _pick_fallback(_CHALLENGE_FALLBACKS, recent_plain)
     return (
         f"📅 *Semana de {theme_esc}*\n\n"
         f"🎯 *Reto de la semana* 💪\n\n"
